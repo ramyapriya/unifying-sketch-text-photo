@@ -1,11 +1,14 @@
+import os
 from torchvision import transforms
 from torch.utils.data import DataLoader
-
 from options import opts
 from model import TripletNetwork
 from dataloader import CustomSketchyCOCO
 
 from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
+
 
 if __name__ == '__main__':
     dataset_transforms = transforms.Compose([
@@ -31,5 +34,12 @@ if __name__ == '__main__':
     
     seed_everything(42, workers=True)
     model = TripletNetwork(vocab_size=vocab_size, combine_type=opts.combine_type)
-    trainer = Trainer(gpus=1, deterministic=True, max_epochs=200) # gpus=1
+    
+    checkpoint_callback = ModelCheckpoint(monitor='top5',
+                mode='max',
+                dirpath=os.path.join(opts.log_dir, 'saved_model'),
+                save_top_k=3,
+                filename='sketchycoco-{epoch:02d}-{top5:.2f}')
+    logger = TensorBoardLogger('tb_logs', name='sketchycoco-logs')
+    trainer = Trainer(gpus=1, deterministic=True, benchmark=True, max_epochs=200, logger=logger, callbacks=[checkpoint_callback])
     trainer.fit(model, train_loader, val_loader)
