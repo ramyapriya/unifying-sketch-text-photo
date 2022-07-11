@@ -40,7 +40,7 @@ class TripletNetwork(pl.LightningModule):
         sk_feature = self.img_embedding_network(sk_tensor)
         img_feature = self.img_embedding_network(img_tensor)
         neg_feature = self.img_embedding_network(neg_tensor)
-        query_feature = self.combine_network(sk_feature, txt_feature)
+        query_feature = self.setattn_network(sk_feature, txt_feature)
         loss = self.loss(query_feature, img_feature, neg_feature)
         self.log('val_loss', loss)
         return query_feature, img_feature

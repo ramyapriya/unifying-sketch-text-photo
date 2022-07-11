@@ -5,7 +5,7 @@ from options import opts
 from model import TripletNetwork
 from dataloader import CustomSketchyCOCO
 
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 
 if __name__ == '__main__':
     dataset_transforms = transforms.Compose([
@@ -24,10 +24,12 @@ if __name__ == '__main__':
 
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
-    print('Train DataLoader loaded with %d items', len(train_dataset))
+    print('Train DataLoader loaded with %d items' % len(train_dataset))
     val_loader = DataLoader(
         dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
-    print('Val DataLoader loaded with %d items', len(val_dataset))
+    print('Val DataLoader loaded with %d items' % len(val_dataset))
+    
+    seed_everything(42, workers=True)
     model = TripletNetwork(vocab_size=vocab_size, combine_type=opts.combine_type)
-    trainer = Trainer(gpus=1) # gpus=1
+    trainer = Trainer(gpus=1, deterministic=True, max_epochs=200) # gpus=1
     trainer.fit(model, train_loader, val_loader)

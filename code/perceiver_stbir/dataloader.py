@@ -11,14 +11,13 @@ import torch
 
 class CustomSketchyCOCO(torch.utils.data.Dataset):
 
-    def __init__(self, opt, mode='train',
+    def __init__(self, opt, mode='train', max_len=50,
             transform=None, debug=False):
         self.opt = opt
         self.transform = transform
-        self.train_ids = []
-        self.val_ids = []
         self.debug = debug
         self.mode = mode
+        self.max_len = max_len
         assert self.mode in ['train', 'val'], ValueError('Invalid mode selected; should be train or val only')
         
         train_file = os.path.join(opt.root_dir, opt.split, 'train.txt')
@@ -26,7 +25,7 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         
         assert os.path.exists(train_file), 'Train file not found'
         assert os.path.exists(val_file), 'Val file not found'
-        
+        self.all_image_files = glob.glob(os.path.join(self.opt.root_dir, 'images', '*', '*.jpg'))
         if self.mode == 'train':
             self.all_ids = [i.strip() for i in open(train_file).readlines()]
         else:
@@ -62,7 +61,7 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         image_file = glob.glob(os.path.join(self.opt.root_dir, 'images', '*', '%s.jpg'%filename))[0]
         negative_file = np.random.choice(self.all_image_files, 1)[0]
 
-        assert os.path.split(sketch_file)[-1] == os.path.split(image_file)[-1], ValueError('file mismatch')
+        assert os.path.splitext(os.path.split(sketch_file)[-1])[0] == os.path.splitext(os.path.split(image_file)[-1])[0], ValueError('file mismatch')
 
         sketch_data = Image.open(sketch_file).convert('RGB')
         image_data = Image.open(image_file).convert('RGB')
