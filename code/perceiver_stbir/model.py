@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.stbir_baseline.network import VGG_Network, Txt_Encoder, SetAttention
+from network import VGG_Network, Txt_Encoder, SetAttention
 import pytorch_lightning as pl
 
 class TripletNetwork(pl.LightningModule):

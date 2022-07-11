@@ -17,6 +17,7 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         self.transform = transform
         self.train_ids = []
         self.val_ids = []
+        self.debug = debug
         self.mode = mode
         assert self.mode in ['train', 'val'], ValueError('Invalid mode selected; should be train or val only')
         if self.mode == 'train':
@@ -29,6 +30,19 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         self.coco_anns = {}
         for ann in word_corpus['images']:
             self.coco_anns[ann['cocoid']] = ann['sentences'][0]['raw']
+            
+        word_map = [tokens['tokens'] for sentences in word_corpus['images']
+                                        for tokens in sentences['sentences']]
+        all_tokens = []
+        for tokens in word_map:
+            all_tokens.extend(tokens)
+        token_freq = Counter(all_tokens)
+        self.word_map = {'<start>': 0, '<end>': 1, '<unk>': 2, '<pad>': 3}
+        count = 4
+        for (word, freq) in token_freq.items():
+            if freq >= 5:
+                self.word_map[word] = count
+                count += 1
 
     def __len__(self):
         return len(self.all_ids)
