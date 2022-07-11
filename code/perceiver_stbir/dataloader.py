@@ -20,10 +20,17 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         self.debug = debug
         self.mode = mode
         assert self.mode in ['train', 'val'], ValueError('Invalid mode selected; should be train or val only')
+        
+        train_file = os.path.join(opt.root_dir, opt.split, 'train.txt')
+        val_file = os.path.join(opt.root_dir, opt.split, 'val.txt')
+        
+        assert os.path.exists(train_file), 'Train file not found'
+        assert os.path.exists(val_file), 'Val file not found'
+        
         if self.mode == 'train':
-            self.all_ids = self.train_ids
+            self.all_ids = [i.strip() for i in open(train_file).readlines()]
         else:
-            self.all_ids = self.val_ids
+            self.all_ids = [i.strip() for i in open(val_file).readlines()]
 
         word_corpus = json.load(open(os.path.join(self.opt.root_dir, 'coco.json')))
         print ('using COCO captions for %s set'%mode)
@@ -51,7 +58,7 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         filename = self.all_ids[index]
 
         text_data = word_tokenize(self.coco_anns[int(filename)].lower())[:self.max_len]
-        sketch_file = glob.glob(os.path.join(self.opt.root_dir, 'sketchycoco', '*', '%s.jpg'%filename))[0]
+        sketch_file = glob.glob(os.path.join(self.opt.root_dir, 'sketchycoco', '*', '%s.png'%filename))[0]
         image_file = glob.glob(os.path.join(self.opt.root_dir, 'images', '*', '%s.jpg'%filename))[0]
         negative_file = np.random.choice(self.all_image_files, 1)[0]
 

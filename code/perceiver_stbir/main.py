@@ -24,6 +24,7 @@ if __name__ == '__main__':
 
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
+    print('Train DataLoader created with ')
     val_loader = DataLoader(
         dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
 
