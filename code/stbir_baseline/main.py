@@ -23,8 +23,10 @@ if __name__ == '__main__':
 
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
+    print('Train DataLoader loaded with %d items', len(train_dataset))
     val_loader = DataLoader(
         dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
+    print('Val DataLoader loaded with %d items', len(val_dataset))
 
     model = TripletNetwork(vocab_size=vocab_size, combine_type=opts.combine_type)
     trainer = Trainer(gpus=1) # gpus=1
