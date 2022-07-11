@@ -45,9 +45,8 @@ class SetAttention(nn.Module):
         
         if self.mode == 'concat':
             self.layer = nn.Linear(input_dim*2, output_dim)
-        self.activation = nn.ReLU()
-        
         self.init_latent = nn.Parameter(torch.rand((num_latents, d_model)))
+        self.embedding = nn.Conv1d(1, d_model, 1)
         self.block1 = PerceiverBlockRepeater(
             PerceiverBlock(d_model, latent_blocks=num_latent_blocks,
                            heads=num_heads, dropout=dropout),
@@ -64,12 +63,17 @@ class SetAttention(nn.Module):
             x = self.layer(torch.cat([input1, input2], dim=1))
         elif self.mode == 'additive':
             x = (input1 + input2)/2.0
+            # x.shape = (batch_size, query_vector)
         else:
             raise ValueError('incorrect option')
         
         # Add cross-attention and latent transformer blocks
+        x = x.unsqueeze(1)
+        # x.shape = (batch_size, channels, query_vector) ; channels = 1 ; in our case
+        x = self.embedding(x)
+        # x.shape = (batch_size, d_model, query_vector)
         x = x.permute(2, 0, 1)
-        # x.shape (input_len, batch_size, d_model)
+        # x.shape (query_vector, batch_size, d_model)
         
         # Transform our Z (latent)
         # z.shape = (latents, d_model)
