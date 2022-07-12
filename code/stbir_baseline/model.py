@@ -1,16 +1,16 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.stbir_baseline.network import VGG_Network, Txt_Encoder, Combine_Network
+from network import VGG_Network, Txt_Encoder, CombineNetwork
 import pytorch_lightning as pl
 
 class TripletNetwork(pl.LightningModule):
 
-    def __init__(self, vocab_size, combine_type='concat'):
+    def __init__(self, vocab_size, combine_type='additive'):
         super().__init__()
         self.txt_embedding_network = Txt_Encoder(vocab_size=vocab_size)
         self.img_embedding_network = VGG_Network()
-        self.combine_network = Combine_Network(input_dim=512, output_dim=512, mode=combine_type)
+        self.combine_network = CombineNetwork(input_dim=512, output_dim=512, mode=combine_type)
         self.loss = nn.TripletMarginLoss(margin=0.2)
 
     def forward(self, x):

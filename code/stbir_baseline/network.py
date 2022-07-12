@@ -10,7 +10,7 @@ class VGG_Network(nn.Module):
         self.backbone = torchvision.models.vgg16(pretrained=True).features
         self.pool_method =  nn.AdaptiveMaxPool2d(1)
 
-    def forward(self, input, bb_box = None):
+    def forward(self, input):
         x = self.backbone(input)
         x = self.pool_method(x).view(-1, 512)
         return F.normalize(x)
@@ -36,9 +36,9 @@ class Txt_Encoder(nn.Module):
         return output
 
 
-class Combine_Network(nn.Module):
-    def __init__(self, input_dim, output_dim, mode='concat'):
-        super(Combine_Network, self).__init__()
+class CombineNetwork(nn.Module):
+    def __init__(self, input_dim, output_dim, mode='additive'):
+        super(CombineNetwork, self).__init__()
         self.mode = mode
         print ('Combine Network Strategy used: ', self.mode)
         
