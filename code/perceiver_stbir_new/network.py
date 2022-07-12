@@ -68,20 +68,20 @@ class SetAttention(nn.Module):
         else:
             raise ValueError('incorrect option')
         
-        # # Add cross-attention and latent transformer blocks
-        # x = x.unsqueeze(1)
-        # # x.shape = (batch_size, channels, query_vector) ; channels = 1 ; in our case
-        # x = self.embedding(x)
-        # # x.shape = (batch_size, d_model, query_vector)
-        # x = x.permute(2, 0, 1)
-        # # x.shape (query_vector, batch_size, d_model)
+        # Add cross-attention and latent transformer blocks
+        x = x.unsqueeze(1)
+        # x.shape = (batch_size, channels, query_vector) ; channels = 1 ; in our case
+        x = self.embedding(x)
+        # x.shape = (batch_size, d_model, query_vector)
+        x = x.permute(0, 2, 1)
+        # # x.shape (batch_size, query_vector, d_model)
         
         # Transform our Z (latent)
         # z.shape = (latents, d_model)
-        z = self.init_latent.unsqueeze(1)
-        # z.shape = (latents, 1, d_model)
-        z = z.expand(-1, x.shape[1], -1)
-        # z.shape = (latents, batch_size, d_model)
+        z = self.init_latent.unsqueeze(0)
+        # z.shape = (1, latents, d_model)
+        z = z.expand(x.shape[0], -1, -1)
+        # z.shape = (batch_size, latents, d_model)
 
         z = self.block1(x, z)
         z = self.block2(x, z)
