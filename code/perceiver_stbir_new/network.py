@@ -3,8 +3,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
-from perceiver_modules import PerceiverBlock, PerceiverBlockRepeater
-
+from perceiver_modules import Attention, FeedForward, PreNorm, cache_fn
 class VGG_Network(nn.Module):
     def __init__(self):
         super(VGG_Network, self).__init__()
@@ -38,25 +37,56 @@ class Txt_Encoder(nn.Module):
 
 
 class SetAttention(nn.Module):
-    def __init__(self, input_dim, output_dim, mode='additive', num_latents=64, d_model=32, num_heads=8, num_latent_blocks=6, dropout=0.1, num_repeats=8):
+    def __init__(self, input_dim, output_dim, 
+                depth = 8,
+                mode='additive',
+                num_latents = 64,
+                latent_dim = 512,
+                cross_heads = 1,
+                latent_heads = 8,
+                cross_dim_head = 64,
+                latent_dim_head = 64,
+                attn_dropout = 0.,
+                ff_dropout = 0.1,
+                weight_tie_layers = True,
+                self_per_cross_attn = 6):
         super(SetAttention, self).__init__()
         self.mode = mode
         print ('Combine Network Strategy used: ', self.mode)
         
-        if self.mode == 'concat':
-            self.layer = nn.Linear(input_dim*2, output_dim)
-        self.init_latent = nn.Parameter(torch.rand((num_latents, d_model)))
-        self.embedding = nn.Conv1d(1, d_model, 1)
-        self.block1 = PerceiverBlockRepeater(
-            PerceiverBlock(d_model, latent_blocks=num_latent_blocks,
-                           heads=num_heads, dropout=dropout),
-            repeats=1
-        )  # 1
-        self.block2 = PerceiverBlockRepeater(
-            PerceiverBlock(d_model, latent_blocks=num_latent_blocks,
-                           heads=num_heads, dropout=dropout),
-            repeats=max(num_repeats - 1, 0)
-        )  # 2-8
+        # if self.mode == 'concat':
+        #     self.layer = nn.Linear(input_dim*2, output_dim)
+        self.init_latent = nn.Parameter(torch.rand((num_latents, latent_dim)))
+        get_cross_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim)
+        get_cross_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
+        get_latent_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout))
+        get_latent_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
+
+        get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff = map(cache_fn, (get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff))
+
+        self.layers = nn.ModuleList([])
+        for i in range(depth):
+            should_cache = i > 0 and weight_tie_layers
+            cache_args = {'_cache': should_cache}
+
+            self_attns = nn.ModuleList([])
+
+            for block_ind in range(self_per_cross_attn):
+                self_attns.append(nn.ModuleList([
+                    get_latent_attn(**cache_args, key = block_ind),
+                    get_latent_ff(**cache_args, key = block_ind)
+                ]))
+
+            self.layers.append(nn.ModuleList([
+                get_cross_attn(**cache_args),
+                get_cross_ff(**cache_args),
+                self_attns
+            ]))
+
+        self.embedding = nn.Sequential(
+            nn.LayerNorm(latent_dim),
+            nn.Linear(latent_dim, latent_dim)
+        )
 
     def forward(self, input1, input2):
         if self.mode == 'concat':
@@ -70,24 +100,31 @@ class SetAttention(nn.Module):
         
         # Add cross-attention and latent transformer blocks
         x = x.unsqueeze(1)
-        # x.shape = (batch_size, channels, query_vector) ; channels = 1 ; in our case
-        x = self.embedding(x)
-        # x.shape = (batch_size, d_model, query_vector)
-        x = x.permute(0, 2, 1)
-        # # x.shape (batch_size, query_vector, d_model)
+        # x.shape = (batch_size, 1, query_vector) ; channels = 1 ; in our case
         
         # Transform our Z (latent)
         # z.shape = (latents, d_model)
         z = self.init_latent.unsqueeze(0)
-        # z.shape = (1, latents, d_model)
-        z = z.expand(x.shape[0], -1, -1)
-        # z.shape = (batch_size, latents, d_model)
-
-        z = self.block1(x, z)
-        z = self.block2(x, z)
+        # z.shape = (latents, 1, d_model)
+        z = z.expand(x.shape[0],-1,-1)
         
-        # Then average every latent
-        z = z.mean(dim=0)
+        for cross_attn, cross_ff, self_attns in self.layers:
+            z = cross_attn(z, context=x, mask=None) + z
+            z = cross_ff(z) + z
 
+            for self_attn, self_ff in self_attns:
+                z = self_attn(z) + z
+                z = self_ff(z) + z
+        z = torch.mean(z, axis=1)
+        z = self.embedding(z)
         return z
+    
+if __name__ == "__main__":
+    net = SetAttention(512, 512)
+    
+    sk = torch.rand(10, 512)
+    im = torch.rand(10, 512)
+    q = net(sk, im)
+    print(q.shape)
+    
 
