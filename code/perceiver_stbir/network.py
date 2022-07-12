@@ -61,9 +61,10 @@ class SetAttention(nn.Module):
     def forward(self, input1, input2):
         if self.mode == 'concat':
             x = self.layer(torch.cat([input1, input2], dim=1))
+            # x.shape = (batch_size, (input1 + input2))
         elif self.mode == 'additive':
             x = (input1 + input2)/2.0
-            # x.shape = (batch_size, query_vector)
+            # x.shape = (batch_size, input1(or 2)) - both vectors MUST have same size
         else:
             raise ValueError('incorrect option')
         

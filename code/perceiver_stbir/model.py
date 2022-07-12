@@ -30,7 +30,7 @@ class TripletNetwork(pl.LightningModule):
         neg_feature = self.img_embedding_network(neg_tensor)
         query_feature = self.setattn_network(sk_feature, txt_feature)
         loss = self.loss(query_feature, img_feature, neg_feature)
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, prog_bar=True)
         return loss
 
     def validation_step(self, val_batch, batch_idx):
@@ -42,7 +42,7 @@ class TripletNetwork(pl.LightningModule):
         neg_feature = self.img_embedding_network(neg_tensor)
         query_feature = self.setattn_network(sk_feature, txt_feature)
         loss = self.loss(query_feature, img_feature, neg_feature)
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, prog_bar=True)
         return query_feature, img_feature
 
     def validation_epoch_end(self, validation_step_outputs):
@@ -57,6 +57,6 @@ class TripletNetwork(pl.LightningModule):
                 query_feature.unsqueeze(0), image_feature_all[idx].unsqueeze(0))
             rank[idx] = distance.le(target_distance).sum()
 
-        self.log('top1', rank.le(1).sum().numpy() / rank.shape[0])
-        self.log('top10', rank.le(10).sum().numpy() / rank.shape[0])
-        self.log('meanK', rank.mean().numpy())
+        self.log('top1', rank.le(1).sum().numpy() / rank.shape[0], prog_bar=True)
+        self.log('top10', rank.le(10).sum().numpy() / rank.shape[0], prog_bar=True)
+        self.log('meanK', rank.mean().numpy().item(), prog_bar=True)

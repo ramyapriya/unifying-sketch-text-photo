@@ -32,14 +32,13 @@ if __name__ == '__main__':
         dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
     print('Val DataLoader loaded with %d items' % len(val_dataset))
     
-    seed_everything(42, workers=True)
     model = TripletNetwork(vocab_size=vocab_size, combine_type=opts.combine_type)
     
-    checkpoint_callback = ModelCheckpoint(monitor='top5',
+    checkpoint_callback = ModelCheckpoint(monitor='top10',
                 mode='max',
                 dirpath=os.path.join(opts.log_dir, 'saved_model'),
                 save_top_k=3,
-                filename='sketchycoco-{epoch:02d}-{top5:.2f}')
+                filename='sketchycoco-{epoch:02d}-{top10:.2f}')
     logger = TensorBoardLogger('tb_logs', name='sketchycoco-logs')
-    trainer = Trainer(gpus=1, deterministic=True, benchmark=True, max_epochs=200, logger=logger, callbacks=[checkpoint_callback])
+    trainer = Trainer(gpus=1, benchmark=True, max_epochs=200, logger=logger, callbacks=[checkpoint_callback])
     trainer.fit(model, train_loader, val_loader)
