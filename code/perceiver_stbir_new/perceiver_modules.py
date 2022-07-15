@@ -97,7 +97,6 @@ class Attention(nn.Module):
     def forward(self, x, context = None, mask = None):
         
         h = self.heads
-        import ipdb; ipdb.set_trace()
         # x.shape = (batch_size, num_latents, context_dim)
         q = self.to_q(x)
         

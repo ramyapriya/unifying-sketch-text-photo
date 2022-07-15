@@ -48,8 +48,8 @@ class SetAttention(nn.Module):
             
         print ('Combine Network Strategy used: ', self.mode)
         self.init_latent = nn.Parameter(torch.rand(self.num_latents, self.latent_dim))
-        get_cross_attn_first = PreNorm(self.latent_dim, Attention(self.latent_dim, input_dim, heads = self.cross_heads, dim_head = self.cross_dim_head, dropout = self.attn_dropout), context_dim = input_dim)
-        get_cross_ff_first = PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
+        get_cross_attn_first = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, input_dim, heads = self.cross_heads, dim_head = self.cross_dim_head, dropout = self.attn_dropout), context_dim = input_dim)
+        get_cross_ff_first = lambda: PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
         get_latent_attn_first = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, heads = self.latent_heads, dim_head = self.latent_dim_head, dropout = self.attn_dropout))
         get_latent_ff_first = lambda: PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
         
