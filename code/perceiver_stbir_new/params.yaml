@@ -1,0 +1,15 @@
+training_params:
+    input_dim: 512
+    output_dim: 512
+model_params:  
+    num_latents: 64
+    latent_dim: 512
+    cross_heads: 1
+    latent_heads: 8
+    cross_dim_head: 512
+    latent_dim_head: 512
+    attn_dropout: 0.
+    ff_dropout: 0.1
+    weight_tie_layers: True
+    self_per_cross_attn: 8
+    depth: 8

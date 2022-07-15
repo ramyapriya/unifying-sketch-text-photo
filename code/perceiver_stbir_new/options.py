@@ -18,5 +18,6 @@ parser.add_argument('--max_len', type=int, default=224, help='Max Edge length of
 parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
 parser.add_argument('--workers', type=int, default=12, help='Num of workers in dataloader')
 parser.add_argument('--combine_type', type=str, default='additive', help='method to combine sketch+text')
+parser.add_argument('--config_file', type=str, default='params.yaml', help='Configuration params')
 
 opts = parser.parse_args()

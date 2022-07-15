@@ -97,15 +97,21 @@ class Attention(nn.Module):
     def forward(self, x, context = None, mask = None):
         
         h = self.heads
-
+        import ipdb; ipdb.set_trace()
+        # x.shape = (batch_size, num_latents, context_dim)
         q = self.to_q(x)
+        
         context = default(context, x)
+        # context.shape = (batch_size, 1, context_dim)
         k, v = self.to_kv(context).chunk(2, dim = -1)
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h = h), (q, k, v))
 
+        # q.shape = torch.Size([batch_size, num_latents, dim_head * heads])
+        # k.shape = torch.Size([batch_size, 1, dim_head * heads]) 
+        # v.shape = torch.Size([batch_size, 1, dim_head * heads])
         sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
-
+        # sim.shape = torch.Size([batch_size, num_latents, 1])
         if exists(mask):
             mask = rearrange(mask, 'b ... -> b (...)')
             max_neg_value = -torch.finfo(sim.dtype).max
@@ -114,8 +120,12 @@ class Attention(nn.Module):
 
         # attention, what we cannot get enough of
         attn = sim.softmax(dim = -1)
+        # sim.shape = torch.Size([batch_size, num_latents, 1])
         attn = self.dropout(attn)
 
         out = einsum('b i j, b j d -> b i d', attn, v)
+        # out.shape = torch.Size([batch_size, num_latents, dim_head * heads])
         out = rearrange(out, '(b h) n d -> b n (h d)', h = h)
+        # out.shape = torch.Size([batch_size, num_latents, dim_head * heads])
         return self.to_out(out)
+         # out.shape = torch.Size([batch_size, num_latents, query_dim])

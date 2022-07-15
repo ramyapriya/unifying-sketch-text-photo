@@ -37,41 +37,50 @@ class Txt_Encoder(nn.Module):
 
 
 class SetAttention(nn.Module):
-    def __init__(self, input_dim, output_dim, 
-                depth = 8,
-                mode='additive',
-                num_latents = 64,
-                latent_dim = 512,
-                cross_heads = 1,
-                latent_heads = 8,
-                cross_dim_head = 64,
-                latent_dim_head = 64,
-                attn_dropout = 0.,
-                ff_dropout = 0.1,
-                weight_tie_layers = True,
-                self_per_cross_attn = 6):
+    def __init__(self, input_dim, output_dim, mode='additive', **kwargs):
         super(SetAttention, self).__init__()
         self.mode = mode
-        print ('Combine Network Strategy used: ', self.mode)
-        
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
+            
         # if self.mode == 'concat':
         #     self.layer = nn.Linear(input_dim*2, output_dim)
-        self.init_latent = nn.Parameter(torch.rand((num_latents, latent_dim)))
-        get_cross_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, input_dim, heads = cross_heads, dim_head = cross_dim_head, dropout = attn_dropout), context_dim = input_dim)
-        get_cross_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
-        get_latent_attn = lambda: PreNorm(latent_dim, Attention(latent_dim, heads = latent_heads, dim_head = latent_dim_head, dropout = attn_dropout))
-        get_latent_ff = lambda: PreNorm(latent_dim, FeedForward(latent_dim, dropout = ff_dropout))
+            
+        print ('Combine Network Strategy used: ', self.mode)
+        self.init_latent = nn.Parameter(torch.rand(self.num_latents, self.latent_dim))
+        get_cross_attn = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, input_dim, heads = self.cross_heads, dim_head = self.cross_dim_head, dropout = self.attn_dropout, context_dim = input_dim))
+        get_cross_ff = lambda: PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
+        get_latent_attn = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, heads = self.latent_heads, dim_head = self.latent_dim_head, dropout = self.attn_dropout))
+        get_latent_ff = lambda: PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
 
         get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff = map(cache_fn, (get_cross_attn, get_cross_ff, get_latent_attn, get_latent_ff))
 
         self.layers = nn.ModuleList([])
-        for i in range(depth):
-            should_cache = i > 0 and weight_tie_layers
+        
+        # Layer 1
+        should_cache = False
+        cache_args = {'_cache': should_cache}
+        
+        self_attns = nn.ModuleList([])
+        for block_ind in range(self.self_per_cross_attn):
+            self_attns.append(nn.ModuleList([
+                get_latent_attn(**cache_args, key = block_ind),
+                get_latent_ff(**cache_args, key = block_ind)
+            ]))
+        self.layers.append(nn.ModuleList([
+                get_cross_attn(**cache_args),
+                get_cross_ff(**cache_args),
+                self_attns
+            ]))
+        
+        # Layer 2 to depth - share weights
+        for i in range(self.depth-1):
+            should_cache = i > 0 and self.weight_tie_layers
             cache_args = {'_cache': should_cache}
 
             self_attns = nn.ModuleList([])
 
-            for block_ind in range(self_per_cross_attn):
+            for block_ind in range(self.self_per_cross_attn):
                 self_attns.append(nn.ModuleList([
                     get_latent_attn(**cache_args, key = block_ind),
                     get_latent_ff(**cache_args, key = block_ind)
@@ -84,8 +93,8 @@ class SetAttention(nn.Module):
             ]))
 
         self.embedding = nn.Sequential(
-            nn.LayerNorm(latent_dim),
-            nn.Linear(latent_dim, latent_dim)
+            nn.LayerNorm(self.latent_dim),
+            nn.Linear(self.latent_dim, output_dim)
         )
 
     def forward(self, input1, input2):
@@ -95,18 +104,18 @@ class SetAttention(nn.Module):
         elif self.mode == 'additive':
             x = (input1 + input2)/2.0
             # x.shape = (batch_size, input1(or 2)) - both vectors MUST have same size
-        else:
-            raise ValueError('incorrect option')
         
-        # Add cross-attention and latent transformer blocks
         x = x.unsqueeze(1)
         # x.shape = (batch_size, 1, query_vector) ; channels = 1 ; in our case
         
         # Transform our Z (latent)
         # z.shape = (latents, d_model)
         z = self.init_latent.unsqueeze(0)
-        # z.shape = (latents, 1, d_model)
+        # z.shape = (1, latents, d_model)
         z = z.expand(x.shape[0],-1,-1)
+        # z.shape = (batch_size, latents, d_model)
+        
+        # Add cross-attention and latent transformer blocks
         
         for cross_attn, cross_ff, self_attns in self.layers:
             z = cross_attn(z, context=x, mask=None) + z
