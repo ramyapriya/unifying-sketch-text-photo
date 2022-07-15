@@ -48,6 +48,11 @@ class SetAttention(nn.Module):
             
         print ('Combine Network Strategy used: ', self.mode)
         self.init_latent = nn.Parameter(torch.rand(self.num_latents, self.latent_dim))
+        get_cross_attn_first = PreNorm(self.latent_dim, Attention(self.latent_dim, input_dim, heads = self.cross_heads, dim_head = self.cross_dim_head, dropout = self.attn_dropout, context_dim = input_dim))
+        get_cross_ff_first = PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
+        get_latent_attn_first = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, heads = self.latent_heads, dim_head = self.latent_dim_head, dropout = self.attn_dropout))
+        get_latent_ff_first = lambda: PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
+        
         get_cross_attn = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, input_dim, heads = self.cross_heads, dim_head = self.cross_dim_head, dropout = self.attn_dropout, context_dim = input_dim))
         get_cross_ff = lambda: PreNorm(self.latent_dim, FeedForward(self.latent_dim, dropout = self.ff_dropout))
         get_latent_attn = lambda: PreNorm(self.latent_dim, Attention(self.latent_dim, heads = self.latent_heads, dim_head = self.latent_dim_head, dropout = self.attn_dropout))
@@ -64,12 +69,12 @@ class SetAttention(nn.Module):
         self_attns = nn.ModuleList([])
         for block_ind in range(self.self_per_cross_attn):
             self_attns.append(nn.ModuleList([
-                get_latent_attn(**cache_args, key = block_ind),
-                get_latent_ff(**cache_args, key = block_ind)
+                get_latent_attn_first(**cache_args, key = block_ind),
+                get_latent_ff_first(**cache_args, key = block_ind)
             ]))
         self.layers.append(nn.ModuleList([
-                get_cross_attn(**cache_args),
-                get_cross_ff(**cache_args),
+                get_cross_attn_first(**cache_args),
+                get_cross_ff_first(**cache_args),
                 self_attns
             ]))
         
