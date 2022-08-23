@@ -24,15 +24,33 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+    print('Train params ', '-'*50, '\n', opts)
 
+    train_dataset = CustomSketchyCOCO(opts, mode='train',
+        transform=dataset_transforms)
     val_dataset = CustomSketchyCOCO(opts, mode='val',
         transform=dataset_transforms)
 
+    vocab_size = len(train_dataset.word_map.items())
+
+    train_loader = DataLoader(
+        dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
+    print('Train DataLoader loaded with %d items' % len(train_dataset))
     val_loader = DataLoader(
         dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
     print('Val DataLoader loaded with %d items' % len(val_dataset))
     
-    ckpt_path = '/vol/research/sketchcaption/ramya/dissertation_exps/training_runs/logs_july14th_v1/saved_model/sketchycoco-epoch=190-top10=0.67.ckpt'
-    model = TripletNetwork.load_from_checkpoint(ckpt_path)
-    trainer = Trainer(gpus=1)
-    trainer.validate(model, val_loader)
+    config = load_config(opts.config_file)
+    model = TripletNetwork(vocab_size=vocab_size,
+                           input_dim=config['training_params']['input_dim'], 
+                           output_dim=config['training_params']['output_dim'], 
+                           model_params=config['model_params'])
+    
+    checkpoint_callback = ModelCheckpoint(monitor='top10',
+                mode='max',
+                dirpath=os.path.join(opts.log_dir, 'saved_model'),
+                save_top_k=3,
+                filename='sketchycoco-{epoch:02d}-{top10:.2f}')
+    logger = TensorBoardLogger('tb_logs', name='sketchycoco-logs')
+    trainer = Trainer(gpus=1, benchmark=True, max_epochs=200, logger=logger, callbacks=[checkpoint_callback])
+    trainer.fit(model, train_loader, val_loader)
