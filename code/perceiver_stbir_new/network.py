@@ -18,7 +18,6 @@ class VGG_Network(nn.Module):
 class Txt_Encoder(nn.Module):
     def __init__(self, vocab_size, word_dim=512, output_dim=512, num_layers=1):
         super(Txt_Encoder, self).__init__()
-        print 
         self.emb_layer = nn.Embedding(vocab_size, word_dim)
         self.gru_layer = nn.GRU(word_dim, 512,
             num_layers=num_layers, batch_first=True, bidirectional=True)
@@ -26,7 +25,11 @@ class Txt_Encoder(nn.Module):
 
     def forward(self, x, length):
         embedded = self.emb_layer(x) # B x max_len x word_dim
-        packed = pack_padded_sequence(embedded, length.cpu(),
+        try:
+            length = length.cpu()
+        except:
+            pass
+        packed = pack_padded_sequence(embedded, length,
             batch_first=True, enforce_sorted=False)
         # packed = embedded
         # last_hidden shape: 2*2 x B x 512
