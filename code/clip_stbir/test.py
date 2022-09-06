@@ -3,17 +3,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from src.clip_sbir.model import CLIPNetwork
-from src.clip_sbir.dataloader import OursScene
-from src.clip_sbir.options import opts
+from model import CLIPNetwork
+from dataloader import CustomSketchyCOCO
+from options import opts
 
 distance_fn = lambda x, y: 1.0 - F.cosine_similarity(x, y)
 
 if __name__ == '__main__':
 	clip_network = CLIPNetwork('ViT-B/32').cuda()
 	img_preprocess = clip_network.img_preprocess
-	train_dataset = OursScene(opts, img_preprocess, mode='train', use_coco=True)
-	val_dataset = OursScene(opts, img_preprocess, mode='val', use_coco=True)
+	train_dataset = CustomSketchyCOCO(opts, img_preprocess, mode='train', use_coco=True)
+	val_dataset = CustomSketchyCOCO(opts, img_preprocess, mode='val', use_coco=True)
 
 	train_loader = DataLoader(dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
 	val_loader = DataLoader(dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 	all_sk_features = []
 	all_img_features = []
 
-	for (txt_tensor, sk_tensor, img_tensor, neg_tensor) in val_loader:
+	for (txt_tensor, txt_length, sk_tensor, img_tensor, neg_tensor) in val_loader:
 		# print (txt_tensor.shape, sk_tensor.shape, img_tensor.shape, neg_tensor.shape)		
 
 		sk_feature = clip_network(txt_tensor.cuda(), dtype='text')

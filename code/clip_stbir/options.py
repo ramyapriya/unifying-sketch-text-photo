@@ -6,24 +6,14 @@ parser = argparse.ArgumentParser(description='Scene Sketch Text')
 # Dataloader Options
 # ----------------------------
 
-# For FS-COCO:
-# ------------------
-
-parser.add_argument('--root_dir', type=str, default='/vol/research/sketchcaption/phd2/dataset_paper/scene-sketch-text/data',
-	help='Enter root directory of OurScene Dataset')
-
-# # For SketchyScene Dataset:
-# parser.add_argument('--root_dir', type=str, default='/vol/research/sketchcaption/datasets/sketchyscene/SketchyScene-7k',
-# 	help='Enter root directory of SketchyScene Dataset')
-
-# # For SketchyCOCO Dataset:
-# parser.add_argument('--root_dir', type=str, default='/vol/research/sketchcaption/datasets/SketchyCOCO/Scene/',
-# 	help='Enter root directory of SketchyCOCO Dataset')
+# For SketchyCOCO Dataset:
+parser.add_argument('--root_dir', type=str, default='/vol/research/sketchcaption/ramya/dissertation_exps/data/',
+	help='Enter root directory of Custom Dataset')
 
 
 parser.add_argument('--p_mask', type=float, default=0.3, help='Probability of an instance being masked')
 parser.add_argument('--use_coco', action='store_true', default=False, help='use COCO captions')
-parser.add_argument('--combine_type', type=str, default='concat', help='method to combine sketch+text')
+parser.add_argument('--combine_type', type=str, default='additive', help='method to combine sketch+text')
 
 
 # For CLIP
