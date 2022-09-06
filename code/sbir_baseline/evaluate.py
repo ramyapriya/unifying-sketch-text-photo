@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 
 from options import opts
 from model import TripletNetwork
-from dataloader import OursScene, SketchyScene, SketchyCOCO, Sketchy
+from dataloader import CustomSketchyCOCO
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -20,24 +20,8 @@ if __name__ == '__main__':
     ])
 
     # Our Dataset
-    val_dataset = OursScene(opts, mode='val',
+    val_dataset = CustomSketchyCOCO(opts, mode='val',
         transform=dataset_transforms)
-
-    # SketchyScene Dataset
-    # val_dataset = SketchyScene(opts, mode='val',
-    #     transform=dataset_transforms)
-
-    # SketchyCOCO Dataset
-    # val_dataset = SketchyCOCO(opts, mode='val',
-    #     transform=dataset_transforms)
-
-    # Sketchy Dataset
-    # val_dataset = Sketchy(opts, mode='val', transform=dataset_transforms)
-
-    # rank10 = []
-    # for category in val_dataset.all_categories[:10]:
-    #     print ('sketch category: ', category)
-    #     val_dataset.category = category
 
     val_loader = DataLoader(
         dataset=val_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
@@ -47,6 +31,3 @@ if __name__ == '__main__':
     trainer = Trainer(logger=False, gpus=-1)
 
     metrics = trainer.validate(model, val_loader)
-    #     rank10.append(metrics[0]['top10'])
-
-    # print ("mean top10: ", np.mean(rank10))

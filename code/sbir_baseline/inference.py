@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 
 from options import opts
 from model import TripletNetwork
-from dataloader import OursScene, SketchyScene, SketchyCOCO, Sketchy
+from dataloader import CustomSketchyCOCO
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -19,22 +19,10 @@ if __name__ == '__main__':
     ])
 
     # Our Dataset
-    train_dataset = OursScene(opts, mode='train',
+    train_dataset = CustomSketchyCOCO(opts, mode='train',
         transform=dataset_transforms)
-    val_dataset = OursScene(opts, mode='val',
+    val_dataset = CustomSketchyCOCO(opts, mode='val',
         transform=dataset_transforms)
-
-    # # SketchyScene Dataset
-    # train_dataset = SketchyScene(opts, mode='train',
-    #     transform=dataset_transforms)
-    # val_dataset = SketchyScene(opts, mode='val',
-    #     transform=dataset_transforms)
-
-    # # SketchyCOCO Dataset
-    # train_dataset = SketchyCOCO(opts, mode='train',
-    #     transform=dataset_transforms)
-    # val_dataset = SketchyCOCO(opts, mode='val',
-    #     transform=dataset_transforms)
 
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)

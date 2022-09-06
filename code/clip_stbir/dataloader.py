@@ -57,13 +57,17 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
         filename = self.all_ids[index]
 
         text_data = word_tokenize(self.coco_anns[int(filename)].lower())[:self.max_len]
+        sketch_file = glob.glob(os.path.join(self.opt.root_dir, 'sketchycoco', '*', '%s.png'%filename))[0]
         image_file = glob.glob(os.path.join(self.opt.root_dir, 'images', '*', '%s.jpg'%filename))[0]
         negative_file = np.random.choice(self.all_image_files, 1)[0]
 
+        assert os.path.splitext(os.path.split(sketch_file)[-1])[0] == os.path.splitext(os.path.split(image_file)[-1])[0], ValueError('file mismatch')
 
+        sketch_data = Image.open(sketch_file).convert('RGB')
         image_data = Image.open(image_file).convert('RGB')
         negative_data = Image.open(negative_file).convert('RGB')
 
+        sketch_data = ImageOps.pad(sketch_data, size=(self.opt.max_len, self.opt.max_len))
         image_data = ImageOps.pad(image_data, size=(self.opt.max_len, self.opt.max_len))
         negative_data = ImageOps.pad(negative_data, size=(self.opt.max_len, self.opt.max_len))
 
@@ -79,13 +83,14 @@ class CustomSketchyCOCO(torch.utils.data.Dataset):
 
         if self.transform:
             txt_tensor = torch.tensor(word_encode)
+            sk_tensor = self.transform(sketch_data)
             img_tensor = self.transform(image_data)
             neg_tensor = self.transform(negative_data)
         
         if self.debug:
-            return txt_tensor, txt_length, img_tensor, neg_tensor, text_data, word_encode, sketch_data, image_data, negative_data
+            return txt_tensor, txt_length, sk_tensor, img_tensor, neg_tensor, text_data, word_encode, sketch_data, image_data, negative_data
         else:
-            return txt_tensor, txt_length, img_tensor, neg_tensor
+            return txt_tensor, txt_length, sk_tensor, img_tensor, neg_tensor
 
 
 if __name__ == '__main__':
@@ -103,17 +108,18 @@ if __name__ == '__main__':
 
     dataset = CustomSketchyCOCO(opts, mode='train', transform=dataset_transforms, debug=True)
 
-    for idx, (txt_tensor, txt_length, img_tensor, neg_tensor,
-        text_data, text_emb, image_data, negative_data) in enumerate(dataset):
+    for idx, (txt_tensor, txt_length, sk_tensor, img_tensor, neg_tensor,
+        text_data, text_emb, sketch_data, image_data, negative_data) in enumerate(dataset):
 
         with open(os.path.join(output_dir, '%d_text.txt'%idx), 'w') as fp:
             fp.write(' '.join(text_data))
         with open(os.path.join(output_dir, '%d_emb.txt'%idx), 'w') as fp:
             fp.write(' '.join(list(map(str, text_emb))))
         
+        sketch_data.save(os.path.join(output_dir, '%d_sk.jpg'%idx))
         image_data.save(os.path.join(output_dir, '%d_img.jpg'%idx))
         negative_data.save(os.path.join(output_dir, '%d_neg.jpg'%idx))
 
         print('Shape of txt_tensor: {} | txt_length: {} | \
             sk_tensor: {} | img_tensor: {} | neg_tensor: {}'.format(
-            txt_tensor.shape, txt_length, img_tensor.shape, neg_tensor.shape))
+            txt_tensor.shape, txt_length, sk_tensor.shape, img_tensor.shape, neg_tensor.shape))

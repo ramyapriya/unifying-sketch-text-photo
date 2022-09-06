@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 
 from options import opts
 from model import TripletNetwork
-from dataloader import OursScene, SketchyScene, SketchyCOCO, Sketchy
+from dataloader import CustomSketchyCOCO
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -19,27 +19,10 @@ if __name__ == '__main__':
     ])
 
     # Our Dataset
-    train_dataset = OursScene(opts, mode='train',
+    train_dataset = CustomSketchyCOCO(opts, mode='train',
         transform=dataset_transforms)
-    val_dataset = OursScene(opts, mode='val',
+    val_dataset = CustomSketchyCOCO(opts, mode='val',
         transform=dataset_transforms)
-
-    # # SketchyScene Dataset
-    # train_dataset = SketchyScene(opts, mode='train',
-    #     transform=dataset_transforms)
-    # val_dataset = SketchyScene(opts, mode='val',
-    #     transform=dataset_transforms)
-
-    # # SketchyCOCO Dataset
-    # train_dataset = SketchyCOCO(opts, mode='train',
-    #     transform=dataset_transforms)
-    # val_dataset = SketchyCOCO(opts, mode='val',
-    #     transform=dataset_transforms)
-
-    # # Sketchy Dataset
-    # train_dataset = Sketchy(opts, mode='train', transform=dataset_transforms)
-    # val_dataset = Sketchy(opts, mode='val', transform=dataset_transforms)
-    # val_dataset.category = 'cannon'
 
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=opts.batch_size, num_workers=opts.workers)
@@ -69,18 +52,6 @@ if __name__ == '__main__':
                 resume_from_checkpoint=None, # "some/path/to/my_checkpoint.ckpt"
                 logger=logger,
                 callbacks=[checkpoint_callback])
-
-    # print ('validating the pre-trained model...')
-    # trainer.validate(model, val_loader)
-    # top1_values = []
-    # for category in val_loader.dataset.all_categories:
-    #     val_loader.dataset.category = category
-    #     print ('Evaluating category: ', category)
-    #     top1_values.append(trainer.validate(model, val_loader)[0]['top1'])
-    # print ('Top1 score: ', np.mean(top1_values))
-    # input ('press any key to contrinue training')
-
-    # trainer.tune(model)
 
     trainer.fit(model, train_loader, val_loader)
 

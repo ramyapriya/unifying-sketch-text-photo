@@ -1,9 +1,9 @@
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
-from src.tbir_baseline.options import opts
-from src.tbir_baseline.model import TripletNetwork
-from src.tbir_baseline.dataloader import OursScene
+from options import opts
+from model import TripletNetwork
+from dataloader import CustomSketchyCOCO
 
 from pytorch_lightning import Trainer
 
@@ -14,9 +14,9 @@ if __name__ == '__main__':
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    train_dataset = OursScene(opts, mode='train',
+    train_dataset = CustomSketchyCOCO(opts, mode='train',
         transform=dataset_transforms, use_coco=opts.use_coco)
-    val_dataset = OursScene(opts, mode='val',
+    val_dataset = CustomSketchyCOCO(opts, mode='val',
         transform=dataset_transforms, use_coco=opts.use_coco)
 
     vocab_size = len(train_dataset.word_map.items())

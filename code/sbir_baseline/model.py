@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from network import VGG_Network, Txt_Encoder, Combine_Network
+from network import VGG_Network
 import pytorch_lightning as pl
 
 class TripletNetwork(pl.LightningModule):
