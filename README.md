@@ -1,4 +1,4 @@
-# unifying-sketch-text-photo
+# unifying-sketch-text-photo (Work in Progress)
 Msc Dissertation
 
 ## Aim
